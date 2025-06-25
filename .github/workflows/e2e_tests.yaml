@@ -1,0 +1,50 @@
+# .github/workflows/e2e_test.yml
+name: E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  e2e_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: 1arp/create-a-file-action@0.4.5
+        with:
+          path: 'src'
+          isAbsolutePath: false
+          file: 'lightspeed-stack.yaml'
+          content: |
+            name: lcore
+            service:
+              host: localhost
+              port: 8080
+              auth_enabled: false
+              workers: 1
+              color_log: true
+              access_log: true
+            user_data_collection:
+              feedback_disabled: false
+              feedback_storage: "/tmp/data/feedback"
+              transcripts_disabled: false
+              transcripts_storage: "/tmp/data/transcripts"
+      
+      - name: list files
+        run: |
+          ls
+          cat lightspeed-stack.yaml
+
+      - name: Run service manually
+        run: |
+          podman run -d -p 8080:8080 -v $PWD/lightspeed-stack.yaml:/app-root/lightspeed-stack.yaml:Z quay.io/lightspeed-core/lightspeed-stack:latest
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 20  # adjust depending on boot time
+
+      - name: Run tests in test container
+        run: |
+          docker build -t test-servthis -f Dockerfile.test .
+          docker run --network host test-servthis
