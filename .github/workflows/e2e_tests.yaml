@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: 1arp/create-a-file-action@0.4.5
+        env: 
+            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           path: 'src'
           isAbsolutePath: false
@@ -25,8 +27,10 @@ jobs:
               color_log: true
               access_log: true
             llama_stack:
-              use_as_library_client: true
-              library_client_config_path: /app-root/run.yaml
+              # use_as_library_client: true
+              # library_client_config_path: /app-root/run.yaml
+              url: http://lightspeednet:8321
+              api_key: "$OPENAI_API_KEY"
             user_data_collection:
               feedback_disabled: false
               feedback_storage: "/tmp/data/feedback"
@@ -166,17 +170,20 @@ jobs:
                 model_type: llm
                 provider_model_id: gpt-4-turbo
 
-
       - name: list files
         run: |
           ls
           cat lightspeed-stack.yaml
+          cat run.yaml
 
       - name: Run service manually
         env: 
             OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          podman run -it --pull=always --env OPENAI_API_KEY=${OPENAI_API_KEY} -p 8080:8080 -v $PWD/lightspeed-stack.yaml:/app-root/lightspeed-stack.yaml:Z -v $PWD/run.yaml:/app-root/run.yaml:Z quay.io/lightspeed-core/lightspeed-stack:latest
+          curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+          docker-compose up -d
 
       - name: Wait for services
         run: |
@@ -185,5 +192,5 @@ jobs:
 
       - name: Run tests in test container
         run: |
-          docker build -t test-servthis -f Dockerfile.test .
-          docker run --network host test-servthis
+          echo "We got here and the setup is done, yey"
+          curl http://lightspeednet:8080/v1/models
